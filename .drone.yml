@@ -1,5 +1,6 @@
 kind: pipeline
-name: default
+type: docker
+name: linux
 
 platform:
   os: linux
@@ -21,78 +22,45 @@ steps:
   volumes:
   - name: go
     path: /go
-  when:
-    event:
-    - push
-    - tag
-
 
 - name: publish_amd64
   image: plugins/docker
   pull: if-not-exists
   settings:
-    repo: drone/drone-runner-digitalocean
-    auto_tag: true
-    auto_tag_suffix: linux-amd64
+    repo: deepernetwork/drone-runner-digitalocean
+    tags:
+      - latest
     dockerfile: docker/Dockerfile.linux.amd64
     username:
       from_secret: docker_username
     password:
       from_secret: docker_password
-  when:
-    ref:
-    - refs/heads/master
-    - refs/tags/*
 
-- name: publish_arm
-  image: plugins/docker
-  pull: if-not-exists
-  settings:
-    repo: drone/drone-runner-digitalocean
-    auto_tag: true
-    auto_tag_suffix: linux-arm
-    dockerfile: docker/Dockerfile.linux.arm
-    username:
-      from_secret: docker_username
-    password:
-      from_secret: docker_password
-  when:
-    ref:
-    - refs/heads/master
-    - refs/tags/*
+---
+kind: pipeline
+type: docker
+name: manifest
 
-- name: publish_arm64
-  image: plugins/docker
-  pull: if-not-exists
-  settings:
-    repo: drone/drone-runner-digitalocean
-    auto_tag: true
-    auto_tag_suffix: linux-arm64
-    dockerfile: docker/Dockerfile.linux.arm64
-    username:
-      from_secret: docker_username
-    password:
-      from_secret: docker_password
-  when:
-    ref:
-    - refs/heads/master
-    - refs/tags/*
-
+steps:
 - name: manifest
   image: plugins/manifest
   settings:
     spec: docker/manifest.tmpl
-    auto_tag: true
+    tags:
+      - latest
     ignore_missing: true
     password:
       from_secret: docker_password
     username:
       from_secret: docker_username
-  when:
-    ref:
-    - refs/heads/master
-    - refs/tags/*
+
+depends_on:
+  - linux
 
 volumes:
 - name: go
   temp: {}
+
+trigger:
+  branch:
+  - recursive-checkout
